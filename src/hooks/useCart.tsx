@@ -47,7 +47,7 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
       } 
 
       if(product) {
-        product.amount = 1
+        product.amount += 1
       } else {
         const product = await api.get(`/products/${productId}`)
 
@@ -67,9 +67,17 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
 
   const removeProduct = (productId: number) => {
     try {
-      const updatedCart = [...cart].filter(item => item.id !== productId);
-      localStorage.setItem('@RocketShoes:cart', JSON.stringify(updatedCart));
-      setCart(updatedCart)
+      
+      const product = [...cart].find(item => item.id === productId);
+
+      if(product) {
+        const updatedCart = [...cart].filter(product => product.id !== productId)
+        localStorage.setItem('@RocketShoes:cart', JSON.stringify(updatedCart));
+        setCart(updatedCart)
+      } else {
+        throw new Error()
+      }
+      
     } catch {
       toast.error('Erro na remoção do produto');
     }
@@ -80,15 +88,28 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     amount,
   }: UpdateProductAmount) => {
     try {
-      // const updatedCart = [...cart]
-      // const product = updatedCart.find(item => item.id === productId)
+      if(amount <= 0) {
+        return
+      }
 
-      // if(product?.amount <= 0) {
-      //   return
-      // }
+      const stock = await api.get(`/stock/${productId}`)
+      const stockAmount = stock.data.amount
 
+      if(amount > stockAmount) {
+        toast.error('Quantidade solicitada fora de estoque');
+        return
+      }
 
+      const updatedCart = [...cart]
+      const product = updatedCart.find(product => product.id === productId);
 
+      if(product) {
+        product.amount = amount
+        setCart(updatedCart)
+        localStorage.setItem('@RocketShoes:cart', JSON.stringify(updatedCart));
+      } else {
+        throw new Error()
+      }
     } catch {
       toast.error('Erro na alteração de quantidade do produto');
     }
